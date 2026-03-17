@@ -1,0 +1,1380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Supply Capacity Chart</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f2ec;
+    --paper: #faf8f4;
+    --ink: #1a1814;
+    --ink2: #3d3a34;
+    --ink3: #7a7670;
+    --rule: #ddd9d0;
+    --band-best: rgba(34, 139, 87, 0.12);
+    --band-worst: rgba(200, 80, 40, 0.10);
+    --band-stroke-best: rgba(34, 139, 87, 0.5);
+    --band-stroke-worst: rgba(200, 80, 40, 0.5);
+    --orders-bar: rgba(26, 24, 20, 0.75);
+    --accent: #c85028;
+    --accent2: #228b57;
+    --font: 'IBM Plex Mono', monospace;
+    --font-sans: 'IBM Plex Sans Condensed', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    font-family: var(--font-sans);
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 40px 48px;
+  }
+
+  /* HEADER */
+  .top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 36px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .title-block h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+    text-transform: uppercase;
+  }
+
+  .title-block p {
+    font-family: var(--font);
+    font-size: 0.65rem;
+    color: var(--ink3);
+    margin-top: 5px;
+    letter-spacing: 0.08em;
+  }
+
+  .reading-block {
+    text-align: right;
+  }
+
+  .reading-block .read-label {
+    font-family: var(--font);
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink3);
+    margin-bottom: 2px;
+  }
+
+  .reading-block .read-value {
+    font-family: var(--font);
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--ink);
+    line-height: 1;
+  }
+
+  .reading-block .read-sub {
+    font-family: var(--font);
+    font-size: 0.6rem;
+    color: var(--ink3);
+    margin-top: 3px;
+  }
+
+  /* INPUT ROW */
+  .input-section {
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    padding: 20px 24px;
+    margin-bottom: 28px;
+  }
+
+  .input-section-title {
+    font-family: var(--font);
+    font-size: 0.6rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink3);
+    margin-bottom: 14px;
+  }
+
+  .hour-inputs {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+  }
+
+  .hour-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .hour-cell label {
+    font-family: var(--font);
+    font-size: 0.58rem;
+    letter-spacing: 0.08em;
+    color: var(--ink3);
+    text-align: center;
+  }
+
+  .hour-cell input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--rule);
+    border-radius: 0;
+    padding: 8px 6px;
+    font-family: var(--font);
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--ink);
+    text-align: center;
+    outline: none;
+    transition: border-color 0.15s;
+    -moz-appearance: textfield;
+  }
+
+  .hour-cell input::-webkit-inner-spin-button,
+  .hour-cell input::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+  .hour-cell input:focus {
+    border-color: var(--ink);
+    background: #fff;
+  }
+
+  /* VARIABLE CONTROLS */
+  .var-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .var-card {
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    padding: 8px 12px;
+  }
+
+  .var-card-label {
+    font-family: var(--font);
+    font-size: 0.55rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink3);
+    margin-bottom: 6px;
+  }
+
+  .range-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .range-val {
+    font-family: var(--font);
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--ink);
+    min-width: 26px;
+    text-align: center;
+  }
+
+  .range-row input[type=range] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 2px;
+    background: var(--rule);
+    outline: none;
+  }
+
+  .range-row input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 10px;
+    height: 10px;
+    background: var(--ink);
+    border-radius: 50%;
+    cursor: pointer;
+  }
+
+  .var-description {
+    font-family: var(--font);
+    font-size: 0.52rem;
+    color: var(--ink3);
+    margin-top: 5px;
+    letter-spacing: 0.03em;
+  }
+
+  /* HOW TO READ BAR */
+  .how-to-read {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    padding: 8px 14px;
+    margin-bottom: 10px;
+    font-family: var(--font);
+    font-size: 0.6rem;
+    flex-wrap: wrap;
+  }
+
+  .htr-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--ink2);
+  }
+
+  .htr-swatch {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  .htr-line {
+    display: inline-block;
+    width: 20px;
+    height: 0;
+    border-top: 2px solid var(--ink);
+  }
+
+  .htr-line.dashed { border-style: dashed; }
+  .htr-sep { color: var(--rule); font-size: 0.8rem; }
+  .htr-note { color: var(--ink3); font-size: 0.56rem; letter-spacing: 0.03em; }
+
+  .daily-panel {
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--ink);
+    padding: 18px 24px;
+    margin-bottom: 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 20px;
+    align-items: center;
+  }
+
+  .daily-panel-label {
+    font-family: var(--font);
+    font-size: 0.58rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink3);
+    margin-bottom: 6px;
+  }
+
+  .daily-panel-value {
+    font-family: var(--font);
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--ink);
+    line-height: 1;
+  }
+
+  .daily-panel-sub {
+    font-family: var(--font);
+    font-size: 0.55rem;
+    color: var(--ink3);
+    margin-top: 3px;
+    letter-spacing: 0.04em;
+    line-height: 1.5;
+  }
+
+  .daily-panel-control {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .daily-panel-control .range-row {
+    gap: 8px;
+  }
+
+  .daily-divider {
+    width: 1px;
+    background: var(--rule);
+    align-self: stretch;
+    margin: 0 4px;
+  }
+
+  .section-label {
+    font-family: var(--font);
+    font-size: 0.58rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink3);
+    margin-bottom: 8px;
+  }
+  .chart-section {
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    padding: 24px;
+    margin-bottom: 16px;
+    position: relative;
+  }
+
+  .chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+  }
+
+  .chart-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .chart-subtitle {
+    font-family: var(--font);
+    font-size: 0.58rem;
+    color: var(--ink3);
+    margin-top: 3px;
+    letter-spacing: 0.04em;
+  }
+
+  .legend {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    align-items: flex-end;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--font);
+    font-size: 0.58rem;
+    color: var(--ink2);
+    letter-spacing: 0.04em;
+  }
+
+  .legend-swatch {
+    width: 24px;
+    height: 10px;
+    border-radius: 1px;
+  }
+
+  .legend-line {
+    width: 24px;
+    height: 0;
+    border-top: 2px solid;
+  }
+
+  .chart-wrap {
+    position: relative;
+    height: 380px;
+  }
+
+  /* TOOLTIP */
+  .custom-tooltip {
+    position: absolute;
+    background: var(--ink);
+    color: #f5f2ec;
+    padding: 12px 16px;
+    font-family: var(--font);
+    font-size: 0.62rem;
+    letter-spacing: 0.05em;
+    pointer-events: none;
+    display: none;
+    z-index: 100;
+    min-width: 200px;
+    line-height: 1.8;
+  }
+
+  .tooltip-hour {
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+    padding-bottom: 5px;
+  }
+
+  .tooltip-row { display: flex; justify-content: space-between; gap: 20px; }
+  .tooltip-row span:last-child { font-weight: 500; }
+
+  /* BOTTOM SUMMARY */
+  .summary-row {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    margin-bottom: 20px;
+  }
+
+  .summary-cell {
+    background: var(--paper);
+    padding: 10px 12px;
+    text-align: center;
+  }
+
+  .sc-hour {
+    font-family: var(--font);
+    font-size: 0.6rem;
+    color: var(--ink3);
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+  }
+
+  .sc-orders {
+    font-family: var(--font);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 2px;
+  }
+
+  .sc-range {
+    font-family: var(--font);
+    font-size: 0.58rem;
+    line-height: 1.5;
+  }
+
+  .sc-best { color: var(--accent2); }
+  .sc-worst { color: var(--accent); }
+
+  /* GANTT CHART */
+  .gantt-wrap {
+    display: grid;
+    gap: 0;
+  }
+
+  .gantt-header {
+    display: grid;
+    grid-template-columns: 80px repeat(6, 1fr);
+    gap: 0;
+    margin-bottom: 6px;
+  }
+
+  .gantt-header-cell {
+    font-family: var(--font);
+    font-size: 0.58rem;
+    color: var(--ink3);
+    text-align: center;
+    padding: 2px 0;
+    letter-spacing: 0.06em;
+  }
+
+  .gantt-group-label {
+    font-family: var(--font);
+    font-size: 0.55rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink3);
+    padding: 8px 0 4px 0;
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--rule);
+    margin-top: 4px;
+  }
+
+  .gantt-row {
+    display: grid;
+    grid-template-columns: 80px repeat(6, 1fr);
+    gap: 2px;
+    margin-bottom: 3px;
+    align-items: center;
+  }
+
+  .gantt-row-label {
+    font-family: var(--font);
+    font-size: 0.58rem;
+    color: var(--ink2);
+    padding-right: 8px;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .gantt-cell {
+    height: 22px;
+    border-radius: 1px;
+    position: relative;
+  }
+
+  .gantt-cell.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font);
+    font-size: 0.58rem;
+    font-weight: 500;
+    color: #fff;
+  }
+
+  .gantt-cell.active.first {
+    border-radius: 3px 0 0 3px;
+  }
+
+  .gantt-cell.active.last {
+    border-radius: 0 3px 3px 0;
+  }
+
+  .gantt-cell.active.only {
+    border-radius: 3px;
+  }
+
+  .gantt-cell.active.mid {
+    border-radius: 0;
+  }
+
+  .gantt-cell.inactive {
+    background: transparent;
+  }
+
+  .gantt-totals-row {
+    font-family: var(--font);
+    font-size: 0.6rem;
+    color: var(--ink2);
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 6px;
+    background: var(--bg);
+    border: 1px solid var(--rule);
+  }
+
+  .gantt-totals-row span { color: var(--ink); font-weight: 500; }
+
+  .coverage-row {
+    display: grid;
+    grid-template-columns: 44px 1fr 1fr 1fr;
+    gap: 4px;
+    margin-bottom: 3px;
+    font-family: var(--font);
+    font-size: 0.58rem;
+    align-items: center;
+  }
+
+  .coverage-row.header { color: var(--ink3); font-size: 0.52rem; letter-spacing: 0.06em; margin-bottom: 5px; }
+
+  .cov-cell { padding: 3px 5px; }
+
+  .cov-ok { background: rgba(34,139,87,0.12); color: var(--accent2); border-radius: 2px; text-align:center; }
+  .cov-warn { background: rgba(245,158,11,0.12); color: #b45309; border-radius: 2px; text-align:center; }
+  .cov-bad { background: rgba(200,80,40,0.12); color: var(--accent); border-radius: 2px; text-align:center; }
+
+  .manual-join-input {
+    width: 100%;
+    font-family: var(--font);
+    font-size: 0.85rem;
+    font-weight: 600;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    padding: 3px 5px;
+    color: var(--ink);
+  }
+
+  .note {
+    font-family: var(--font);
+    font-size: 0.58rem;
+    color: var(--ink3);
+    letter-spacing: 0.04em;
+    line-height: 1.7;
+    border-top: 1px solid var(--rule);
+    padding-top: 14px;
+  }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="title-block">
+    <h1>Sustainable User Capacity</h1>
+    <p>LIVE EVENT PURCHASING TOOL · SUPPLY MODEL · 06:00–12:00 PT</p>
+  </div>
+  <div class="reading-block">
+    <div class="read-label">Peak Demand Hour</div>
+    <div class="read-value" id="bottleneckHour">—</div>
+    <div class="read-sub" id="bottleneckSub">—</div>
+  </div>
+</div>
+
+<!-- ORDER INPUTS -->
+<div class="input-section">
+  <div class="input-section-title">Step 1 — Enter actual order volume per hour</div>
+  <div class="hour-inputs">
+    <div class="hour-cell"><label>6 AM</label><input type="number" id="h6" value="80" min="0"></div>
+    <div class="hour-cell"><label>7 AM</label><input type="number" id="h7" value="120" min="0"></div>
+    <div class="hour-cell"><label>8 AM</label><input type="number" id="h8" value="200" min="0"></div>
+    <div class="hour-cell"><label>9 AM</label><input type="number" id="h9" value="240" min="0"></div>
+    <div class="hour-cell"><label>10 AM</label><input type="number" id="h10" value="180" min="0"></div>
+    <div class="hour-cell"><label>11 AM</label><input type="number" id="h11" value="130" min="0"></div>
+  </div>
+</div>
+
+<!-- VARIABLE CONTROLS -->
+<div class="var-section">
+  <div class="var-card">
+    <div class="var-card-label">Success Rate Range</div>
+    <div class="range-row">
+      <span class="range-val" id="srMinVal">30%</span>
+      <input type="range" id="srMin" min="10" max="60" value="30">
+      <input type="range" id="srMax" min="40" max="90" value="70">
+      <span class="range-val" id="srMaxVal">70%</span>
+    </div>
+    <div class="var-description">Defines best-case / worst-case user demand per order</div>
+  </div>
+  <div class="var-card">
+    <div class="var-card-label">Successful Txn Time</div>
+    <div class="range-row">
+      <span class="range-val" id="stMinVal">5m</span>
+      <input type="range" id="stMin" min="3" max="6" value="5" step="1">
+      <input type="range" id="stMax" min="6" max="10" value="7" step="1">
+      <span class="range-val" id="stMaxVal">7m</span>
+    </div>
+    <div class="var-description">Minutes to complete a successful purchase</div>
+  </div>
+  <div class="var-card">
+    <div class="var-card-label">Failed Txn Time</div>
+    <div class="range-row">
+      <span class="range-val" id="ftMinVal">1m</span>
+      <input type="range" id="ftMin" min="1" max="2" value="1" step="1">
+      <input type="range" id="ftMax" min="2" max="5" value="3" step="1">
+      <span class="range-val" id="ftMaxVal">3m</span>
+    </div>
+    <div class="var-description">Minutes consumed by an unsuccessful attempt</div>
+  </div>
+</div>
+
+<!-- HOW TO READ -->
+<div class="how-to-read">
+  <span class="htr-item"><span class="htr-swatch" style="background:var(--accent2);"></span><strong>Green</strong> = High SR</span>
+  <span class="htr-sep">·</span>
+  <span class="htr-item"><span class="htr-swatch" style="background:var(--accent);"></span><strong>Red</strong> = Low SR</span>
+  <span class="htr-sep">·</span>
+  <span class="htr-item"><span class="htr-line solid"></span><strong>Solid</strong> = Slow Txn</span>
+  <span class="htr-sep">·</span>
+  <span class="htr-item"><span class="htr-line dashed"></span><strong>Dashed</strong> = Fast Txn</span>
+  <span class="htr-sep">·</span>
+  <span class="htr-note">Slow txn → fewer attempts/hr → supply stretches further → more simultaneous users</span>
+</div>
+
+<!-- CHART -->
+<div class="chart-section">
+  <div class="chart-header">
+    <div>
+      <div class="chart-title">Orders to Fulfill vs. Users Needed</div>
+      <div class="chart-subtitle">Bars = orders per hour to purchase · Lines = users required to fulfill them across variable scenarios</div>
+    </div>
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-swatch" style="background: rgba(26,24,20,0.7);"></div>
+        Orders (left axis)
+      </div>
+      <div class="legend-item">
+        <div class="legend-line" style="border-color: rgba(34,139,87,0.85); border-style: solid;"></div>
+        <span class="scen-label" data-scen="hiSrSlow">High SR · Slow Txn</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-line" style="border-color: rgba(34,139,87,0.85); border-style: dashed;"></div>
+        <span class="scen-label" data-scen="hiSrFast">High SR · Fast Txn</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-line" style="border-color: rgba(200,80,40,0.85); border-style: dashed;"></div>
+        <span class="scen-label" data-scen="loSrSlow">Low SR · Slow Txn</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-line" style="border-color: rgba(200,80,40,0.85); border-style: solid;"></div>
+        <span class="scen-label" data-scen="loSrFast">Low SR · Fast Txn</span>
+      </div>
+    </div>
+  </div>
+  <div class="chart-wrap">
+    <canvas id="mainChart"></canvas>
+  </div>
+</div>
+
+<!-- SUMMARY TABLE -->
+<div class="summary-row" id="summaryRow"></div>
+
+<!-- DAILY UNIQUE USERS PROJECTION -->
+<div class="section-label" style="margin-top:20px;">Daily Unique User Projection</div>
+<div class="daily-panel" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
+  <div>
+    <div class="daily-panel-label">Total User-Hours Needed / Day</div>
+    <div class="daily-panel-value" id="dailyUserHours">—</div>
+    <div class="daily-panel-sub" id="dailyUserHoursSub">sum of users needed each hour<br>across all 4 scenarios</div>
+  </div>
+  <div>
+    <div class="daily-panel-label">Est. Unique Users (1h active)</div>
+    <div class="daily-panel-value" id="dailyUnique1h">—</div>
+    <div class="daily-panel-sub">= total user-hours ÷ 1</div>
+  </div>
+  <div>
+    <div class="daily-panel-label">Est. Unique Users (2h active)</div>
+    <div class="daily-panel-value" id="dailyUnique2h">—</div>
+    <div class="daily-panel-sub">= total user-hours ÷ 2</div>
+  </div>
+  <div>
+    <div class="daily-panel-label">Est. Unique Users (3h active)</div>
+    <div class="daily-panel-value" id="dailyUnique3h">—</div>
+    <div class="daily-panel-sub">= total user-hours ÷ 3</div>
+  </div>
+</div>
+
+<!-- USER SESSION GANTT -->
+<div class="section-label" style="margin-top:16px;">User Session Breakdown — <span style="font-weight:400;">cohorts by start hour and active window · select scenario to validate rollup</span></div>
+<div class="daily-panel" style="grid-template-columns: 1fr 2fr; align-items:start; gap:24px;">
+  <div>
+    <div class="daily-panel-label">Scenario</div>
+    <div style="display:flex; flex-direction:column; gap:5px; margin-top:4px;">
+      <label style="font-family:var(--font); font-size:0.6rem; color:var(--ink2);">
+        <input type="radio" name="ganttScen" value="hiSrSlow" checked> <span class="scen-label" data-scen="hiSrSlow">Hi SR · Slow Txn</span>
+      </label>
+      <label style="font-family:var(--font); font-size:0.6rem; color:var(--ink2);">
+        <input type="radio" name="ganttScen" value="hiSrFast"> <span class="scen-label" data-scen="hiSrFast">Hi SR · Fast Txn</span>
+      </label>
+      <label style="font-family:var(--font); font-size:0.6rem; color:var(--ink2);">
+        <input type="radio" name="ganttScen" value="loSrSlow"> <span class="scen-label" data-scen="loSrSlow">Lo SR · Slow Txn</span>
+      </label>
+      <label style="font-family:var(--font); font-size:0.6rem; color:var(--ink2);">
+        <input type="radio" name="ganttScen" value="loSrFast"> <span class="scen-label" data-scen="loSrFast">Lo SR · Fast Txn</span>
+      </label>
+    </div>
+    <div style="margin-top:16px;">
+      <div class="daily-panel-label">Totals</div>
+      <div id="ganttTotals" style="margin-top:4px;"></div>
+    </div>
+  </div>
+  <div>
+    <div id="ganttChart"></div>
+  </div>
+</div>
+
+
+<div class="section-label" style="margin-top:16px;">Supply Coverage & Dead Time — <span style="font-weight:400;">given a fixed user pool, who gets squeezed out each hour?</span></div>
+<div class="daily-panel" style="grid-template-columns: 1fr 1fr 1fr; align-items:start;">
+  <div>
+    <div class="daily-panel-label">Scenario</div>
+    <div style="display:flex; flex-direction:column; gap:5px; margin-top:4px;">
+      <label style="font-family:var(--font); font-size:0.6rem; color:var(--ink2);">
+        <input type="radio" name="coverageScen" value="hiSrSlow" checked> <span class="scen-label" data-scen="hiSrSlow">Hi SR · Slow Txn</span>
+      </label>
+      <label style="font-family:var(--font); font-size:0.6rem; color:var(--ink2);">
+        <input type="radio" name="coverageScen" value="hiSrFast"> <span class="scen-label" data-scen="hiSrFast">Hi SR · Fast Txn</span>
+      </label>
+      <label style="font-family:var(--font); font-size:0.6rem; color:var(--ink2);">
+        <input type="radio" name="coverageScen" value="loSrSlow"> <span class="scen-label" data-scen="loSrSlow">Lo SR · Slow Txn</span>
+      </label>
+      <label style="font-family:var(--font); font-size:0.6rem; color:var(--ink2);">
+        <input type="radio" name="coverageScen" value="loSrFast"> <span class="scen-label" data-scen="loSrFast">Lo SR · Fast Txn</span>
+      </label>
+    </div>
+
+    <div style="margin-top:16px;">
+      <div class="daily-panel-label">Avg Hours Active Per User</div>
+      <div class="range-row" style="margin-bottom:4px; margin-top:6px;">
+        <span class="range-val" style="font-size:0.75rem;">1h</span>
+        <input type="range" id="covActiveHrs" min="1" max="3" value="2" step="1" style="flex:1; -webkit-appearance:none; height:2px; background:var(--rule); outline:none;">
+        <span class="range-val" style="font-size:0.75rem;">3h</span>
+      </div>
+      <div class="daily-panel-sub">Currently: <strong id="covActiveHrsVal">2h</strong></div>
+    </div>
+
+    <div style="margin-top:16px;">
+      <div class="daily-panel-label">Total User Pool Size</div>
+      <div style="margin-top:6px; display:flex; align-items:center; gap:8px;">
+        <input type="number" id="poolSize" value="50" min="1" max="500"
+          style="width:64px; font-family:var(--font); font-size:1rem; font-weight:600; border:1px solid var(--rule); background:var(--paper); padding:4px 6px; color:var(--ink);">
+        <span class="daily-panel-sub">users</span>
+      </div>
+      <div class="daily-panel-sub" style="margin-top:4px;" id="poolNeededNote">—</div>
+    </div>
+  </div>
+
+  <div>
+    <div class="daily-panel-label">Hourly Coverage</div>
+    <div id="coverageTable" style="margin-top:6px;"></div>
+  </div>
+
+  <div>
+    <div class="daily-panel-label">How to read this</div>
+    <div class="daily-panel-sub" style="font-size:0.6rem; line-height:1.8; margin-top:4px;">
+      <strong>Pool active</strong> = users from your fixed pool who are active that hour, distributed by random start times across the window.<br><br>
+      <strong>Supply can serve</strong> = max users the hour's order volume can absorb (from the main formula).<br><br>
+      <strong style="color:var(--accent);">Dead time</strong> = active users who cannot be matched to an order that hour — the supply is exhausted by others. They are online but idle.<br><br>
+      Increase the pool size to see more dead time. Decrease it to see under-coverage (orders go unfulfilled).
+    </div>
+  </div>
+</div>
+
+<!-- MANUAL SCENARIO COVERAGE -->
+<div class="section-label" style="margin-top:16px;">Supply Coverage &amp; Dead Time — <span style="font-weight:400;">manual scenario: specify new users joining each hour</span></div>
+<div class="daily-panel" style="grid-template-columns: 1fr 1fr 1fr; align-items:start;">
+  <div>
+    <div class="daily-panel-label">Scenario</div>
+    <div style="display:flex; flex-direction:column; gap:5px; margin-top:4px;">
+      <label style="font-family:var(--font); font-size:0.6rem; color:var(--ink2);">
+        <input type="radio" name="manualScen" value="hiSrSlow" checked> <span class="scen-label" data-scen="hiSrSlow">Hi SR · Slow Txn</span>
+      </label>
+      <label style="font-family:var(--font); font-size:0.6rem; color:var(--ink2);">
+        <input type="radio" name="manualScen" value="hiSrFast"> <span class="scen-label" data-scen="hiSrFast">Hi SR · Fast Txn</span>
+      </label>
+      <label style="font-family:var(--font); font-size:0.6rem; color:var(--ink2);">
+        <input type="radio" name="manualScen" value="loSrSlow"> <span class="scen-label" data-scen="loSrSlow">Lo SR · Slow Txn</span>
+      </label>
+      <label style="font-family:var(--font); font-size:0.6rem; color:var(--ink2);">
+        <input type="radio" name="manualScen" value="loSrFast"> <span class="scen-label" data-scen="loSrFast">Lo SR · Fast Txn</span>
+      </label>
+    </div>
+
+    <div style="margin-top:16px;">
+      <div class="daily-panel-label">Hours Active Per User</div>
+      <div class="range-row" style="margin-bottom:4px; margin-top:6px;">
+        <span class="range-val" style="font-size:0.75rem;">1h</span>
+        <input type="range" id="manualActiveHrs" min="1" max="3" value="2" step="1" style="flex:1; -webkit-appearance:none; height:2px; background:var(--rule); outline:none;">
+        <span class="range-val" style="font-size:0.75rem;">3h</span>
+      </div>
+      <div class="daily-panel-sub">Currently: <strong id="manualActiveHrsVal">2h</strong></div>
+    </div>
+
+    <div style="margin-top:16px;">
+      <div class="daily-panel-label">New Users Joining Each Hour</div>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin-top:6px;">
+        <div>
+          <div style="font-family:var(--font); font-size:0.55rem; color:var(--ink3); margin-bottom:2px;">6 AM</div>
+          <input type="number" id="mj6" value="10" min="0" class="manual-join-input">
+        </div>
+        <div>
+          <div style="font-family:var(--font); font-size:0.55rem; color:var(--ink3); margin-bottom:2px;">7 AM</div>
+          <input type="number" id="mj7" value="10" min="0" class="manual-join-input">
+        </div>
+        <div>
+          <div style="font-family:var(--font); font-size:0.55rem; color:var(--ink3); margin-bottom:2px;">8 AM</div>
+          <input type="number" id="mj8" value="10" min="0" class="manual-join-input">
+        </div>
+        <div>
+          <div style="font-family:var(--font); font-size:0.55rem; color:var(--ink3); margin-bottom:2px;">9 AM</div>
+          <input type="number" id="mj9" value="10" min="0" class="manual-join-input">
+        </div>
+        <div>
+          <div style="font-family:var(--font); font-size:0.55rem; color:var(--ink3); margin-bottom:2px;">10 AM</div>
+          <input type="number" id="mj10" value="10" min="0" class="manual-join-input">
+        </div>
+        <div>
+          <div style="font-family:var(--font); font-size:0.55rem; color:var(--ink3); margin-bottom:2px;">11 AM</div>
+          <input type="number" id="mj11" value="10" min="0" class="manual-join-input">
+        </div>
+      </div>
+      <div class="daily-panel-sub" style="margin-top:6px;">Total unique users: <strong id="manualTotalUsers">—</strong></div>
+    </div>
+  </div>
+
+  <div>
+    <div class="daily-panel-label">Hourly Coverage</div>
+    <div id="manualCoverageTable" style="margin-top:6px;"></div>
+  </div>
+
+  <div>
+    <div class="daily-panel-label">How to read this</div>
+    <div class="daily-panel-sub" style="font-size:0.6rem; line-height:1.8; margin-top:4px;">
+      <strong>New joining</strong> = users you specify starting that hour.<br><br>
+      <strong>Carry-over</strong> = users from prior hours still within their active window.<br><br>
+      <strong>Total active</strong> = new + carry-over.<br><br>
+      <strong>Supply serves</strong> = max users the hour's orders can absorb.<br><br>
+      <strong style="color:var(--accent);">Dead time</strong> = active users who cannot be matched — supply is exhausted. Try front-loading users at 6–7 AM vs. flooding in at 9 AM to see the difference.
+    </div>
+  </div>
+</div>
+
+<div class="note" id="noteText">—</div>
+
+<script>
+const HOURS = ['6 AM','7 AM','8 AM','9 AM','10 AM','11 AM'];
+const HOUR_IDS = ['h6','h7','h8','h9','h10','h11'];
+
+function getOrders() {
+  return HOUR_IDS.map(function(id) {
+    return Math.max(0, parseInt(document.getElementById(id).value) || 0);
+  });
+}
+
+function getParams() {
+  return {
+    srMin: parseInt(document.getElementById('srMin').value) / 100,
+    srMax: parseInt(document.getElementById('srMax').value) / 100,
+    stMin: parseInt(document.getElementById('stMin').value),
+    stMax: parseInt(document.getElementById('stMax').value),
+    ftMin: parseInt(document.getElementById('ftMin').value),
+    ftMax: parseInt(document.getElementById('ftMax').value),
+    hrMin: 1,
+    hrMax: 3
+  };
+}
+
+function weightedTime(sr, successTime, failTime) {
+  return (sr * successTime) + ((1 - sr) * failTime);
+}
+
+function usersNeeded(orders, sr, successTime, failTime) {
+  var wt = weightedTime(sr, successTime, failTime);
+  return Math.ceil((orders / sr) * (wt / 60));
+}
+
+// Greedy cohort sizing: process start hours left to right,
+// sizing each cohort to cover whatever demand isn't already met by carry-in from prior cohorts
+function computeCohorts(usersPerHour, activeHours) {
+  var N = usersPerHour.length;
+  var validStarts = N - activeHours + 1;
+  var cohortSizes = [];
+  var coverage = [];
+  for (var i = 0; i < N; i++) coverage.push(0);
+  for (var s = 0; s < validStarts; s++) {
+    var stillNeeded = Math.max(0, usersPerHour[s] - coverage[s]);
+    cohortSizes.push(stillNeeded);
+    for (var h = s; h < s + activeHours && h < N; h++) {
+      coverage[h] += stillNeeded;
+    }
+  }
+  return { cohortSizes: cohortSizes, coverage: coverage };
+}
+
+function dailyUniqueUsersRandom(usersPerHour, activeHours) {
+  var result = computeCohorts(usersPerHour, activeHours);
+  var total = 0;
+  for (var i = 0; i < result.cohortSizes.length; i++) total += result.cohortSizes[i];
+  return total;
+}
+
+function getCohorts(usersPerHour, activeHours) {
+  return computeCohorts(usersPerHour, activeHours).cohortSizes;
+}
+
+function coverageByHour(usersPerHour, activeHours) {
+  var result = computeCohorts(usersPerHour, activeHours);
+  var coverage = result.coverage;
+  var rows = [];
+  for (var h = 0; h < usersPerHour.length; h++) {
+    var needed = usersPerHour[h];
+    var active = coverage[h];
+    var squeezed = Math.max(0, active - needed);
+    var coveredPct = active > 0 ? Math.round((Math.min(active, needed) / active) * 100) : 100;
+    rows.push({ hour: HOURS[h], needed: needed, active: active, squeezed: squeezed, coveredPct: coveredPct });
+  }
+  return rows;
+}
+
+function buildRows(cohorts, activeHours, color) {
+  var hourLabels = ['6 AM','7 AM','8 AM','9 AM','10 AM','11 AM'];
+  var html = '';
+  for (var s = 0; s < cohorts.length; s++) {
+    var count = cohorts[s];
+    if (count === 0) continue;
+    var endHour = s + activeHours - 1;
+    var spanLabel = activeHours === 1 ? hourLabels[s] : (hourLabels[s] + '&ndash;' + hourLabels[endHour]);
+    var cells = '';
+    for (var h = 0; h < hourLabels.length; h++) {
+      var isActive = h >= s && h < s + activeHours;
+      if (!isActive) {
+        cells += '<div class="gantt-cell inactive"></div>';
+      } else {
+        var isFirst = h === s;
+        var isLast = h === s + activeHours - 1;
+        var posClass = activeHours === 1 ? 'only' : isFirst ? 'first' : isLast ? 'last' : 'mid';
+        var midH = Math.floor(s + (activeHours - 1) / 2);
+        var label = (h === midH) ? String(count) : '';
+        cells += '<div class="gantt-cell active ' + posClass + '" style="background:' + color + ';">' + label + '</div>';
+      }
+    }
+    html += '<div class="gantt-row"><div class="gantt-row-label">' + spanLabel + '</div>' + cells + '</div>';
+  }
+  return html;
+}
+
+// Chart setup
+var ctx = document.getElementById('mainChart').getContext('2d');
+
+Chart.register({
+  id: 'bandFill',
+  beforeDraw: function(chart) {
+    var c = chart.ctx, chartArea = chart.chartArea, scales = chart.scales;
+    if (!chartArea) return;
+    var y = scales['y2'], x = scales['x'];
+    if (!y || !x) return;
+    var best = chart.data.datasets[1].data;
+    var worst = chart.data.datasets[4].data;
+    if (!best || !worst) return;
+    c.save();
+    c.beginPath();
+    for (var i = 0; i < best.length; i++) {
+      var xp = x.getPixelForValue(i), yp = y.getPixelForValue(best[i]);
+      if (i === 0) c.moveTo(xp, yp); else c.lineTo(xp, yp);
+    }
+    for (var j = worst.length - 1; j >= 0; j--) {
+      c.lineTo(x.getPixelForValue(j), y.getPixelForValue(worst[j]));
+    }
+    c.closePath();
+    c.fillStyle = 'rgba(160,160,100,0.08)';
+    c.fill();
+    c.restore();
+  }
+});
+
+var mainChart = new Chart(ctx, {
+  data: {
+    labels: HOURS,
+    datasets: [
+      { type: 'bar', label: 'Orders', data: [], backgroundColor: 'rgba(26,24,20,0.72)', borderColor: 'rgba(26,24,20,0.9)', borderWidth: 1, borderRadius: 1, yAxisID: 'y1', order: 3 },
+      { type: 'line', label: 'High SR · Slow Txn', data: [], borderColor: 'rgba(34,139,87,0.85)', borderWidth: 2, backgroundColor: 'transparent', pointBackgroundColor: 'rgba(34,139,87,0.85)', pointRadius: 4, pointHoverRadius: 6, tension: 0.35, yAxisID: 'y2', order: 1 },
+      { type: 'line', label: 'High SR · Fast Txn', data: [], borderColor: 'rgba(34,139,87,0.85)', borderWidth: 2, borderDash: [6,3], backgroundColor: 'transparent', pointBackgroundColor: 'rgba(34,139,87,0.85)', pointRadius: 4, pointHoverRadius: 6, tension: 0.35, yAxisID: 'y2', order: 1 },
+      { type: 'line', label: 'Low SR · Slow Txn', data: [], borderColor: 'rgba(200,80,40,0.85)', borderWidth: 2, borderDash: [6,3], backgroundColor: 'transparent', pointBackgroundColor: 'rgba(200,80,40,0.85)', pointRadius: 4, pointHoverRadius: 6, tension: 0.35, yAxisID: 'y2', order: 1 },
+      { type: 'line', label: 'Low SR · Fast Txn', data: [], borderColor: 'rgba(200,80,40,0.85)', borderWidth: 2, backgroundColor: 'transparent', pointBackgroundColor: 'rgba(200,80,40,0.85)', pointRadius: 4, pointHoverRadius: 6, tension: 0.35, yAxisID: 'y2', order: 1 }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#1a1814', titleColor: '#f5f2ec', bodyColor: '#c8c4bc',
+        borderColor: '#3d3a34', borderWidth: 1,
+        titleFont: { family: 'IBM Plex Mono', size: 12, weight: '600' },
+        bodyFont: { family: 'IBM Plex Mono', size: 11 },
+        padding: 14,
+        callbacks: {
+          title: function(items) { return items[0].label; },
+          label: function(item) {
+            var labels = ['Orders', 'High SR · Slow Txn', 'High SR · Fast Txn', 'Low SR · Slow Txn', 'Low SR · Fast Txn'];
+            var units = [' orders', ' users', ' users', ' users', ' users'];
+            return '  ' + labels[item.datasetIndex] + ': ' + Math.round(item.raw) + units[item.datasetIndex];
+          }
+        }
+      }
+    },
+    scales: {
+      x: { grid: { color: 'rgba(0,0,0,0.06)', drawBorder: false }, ticks: { color: '#7a7670', font: { family: 'IBM Plex Mono', size: 10 }, maxRotation: 0 } },
+      y1: { type: 'linear', position: 'left', grid: { color: 'rgba(0,0,0,0.06)', drawBorder: false }, ticks: { color: '#7a7670', font: { family: 'IBM Plex Mono', size: 9 } }, title: { display: true, text: 'ORDERS / HR', color: '#7a7670', font: { family: 'IBM Plex Mono', size: 9 } } },
+      y2: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#7a7670', font: { family: 'IBM Plex Mono', size: 9 } }, title: { display: true, text: 'USERS NEEDED', color: '#7a7670', font: { family: 'IBM Plex Mono', size: 9 } } }
+    }
+  }
+});
+
+function updateScenLabels() {
+  var p = getParams();
+  var labels = {
+    hiSrSlow: 'Hi SR \u00b7 Slow Txn \u2013 ' + Math.round(p.srMax * 100) + '%, ' + p.stMax + 'min, ' + p.ftMax + 'min',
+    hiSrFast: 'Hi SR \u00b7 Fast Txn \u2013 ' + Math.round(p.srMax * 100) + '%, ' + p.stMin + 'min, ' + p.ftMin + 'min',
+    loSrSlow: 'Lo SR \u00b7 Slow Txn \u2013 ' + Math.round(p.srMin * 100) + '%, ' + p.stMax + 'min, ' + p.ftMax + 'min',
+    loSrFast: 'Lo SR \u00b7 Fast Txn \u2013 ' + Math.round(p.srMin * 100) + '%, ' + p.stMin + 'min, ' + p.ftMin + 'min'
+  };
+  var spans = document.querySelectorAll('.scen-label');
+  for (var i = 0; i < spans.length; i++) {
+    var key = spans[i].getAttribute('data-scen');
+    if (labels[key]) spans[i].textContent = labels[key];
+  }
+}
+
+function updateCoverage() {
+  var orders = getOrders();
+  var p = getParams();
+  var scenVal = document.querySelector('input[name="coverageScen"]:checked').value;
+  var activeHrs = parseInt(document.getElementById('covActiveHrs').value);
+  var poolSize = Math.max(1, parseInt(document.getElementById('poolSize').value) || 50);
+
+  document.getElementById('covActiveHrsVal').textContent = activeHrs + 'h';
+
+  var scenMap = {
+    hiSrSlow: { sr: p.srMax, st: p.stMax, ft: p.ftMax },
+    hiSrFast: { sr: p.srMax, st: p.stMin, ft: p.ftMin },
+    loSrSlow: { sr: p.srMin, st: p.stMax, ft: p.ftMax },
+    loSrFast: { sr: p.srMin, st: p.stMin, ft: p.ftMin }
+  };
+  var s = scenMap[scenVal];
+  var N = 6;
+  var validStarts = N - activeHrs + 1;
+
+  // How many of the pool are active each hour, given random uniform start times.
+  // A user starting at hour s is active during s, s+1, ..., s+activeHrs-1.
+  // With poolSize users evenly split across validStarts cohorts:
+  //   cohort size = poolSize / validStarts
+  //   active users at hour h = cohort size * number of cohorts overlapping h
+  var activePerHour = [];
+  for (var h = 0; h < N; h++) {
+    var sMin = Math.max(0, h - activeHrs + 1);
+    var sMax = Math.min(validStarts - 1, h);
+    var overlapping = Math.max(0, sMax - sMin + 1);
+    activePerHour.push(Math.round(poolSize * overlapping / validStarts));
+  }
+
+  // Supply capacity each hour = usersNeeded(orders[h]) — the max users supply can absorb
+  var canServe = orders.map(function(o) {
+    return o === 0 ? 0 : usersNeeded(o, s.sr, s.st, s.ft);
+  });
+
+  // Min pool needed (from daily projection model) for reference
+  var usersPerHour = orders.map(function(o) { return usersNeeded(o, s.sr, s.st, s.ft); });
+  var minPool = dailyUniqueUsersRandom(usersPerHour, activeHrs);
+  document.getElementById('poolNeededNote').textContent = 'Min pool needed for full coverage: ' + minPool + ' users';
+
+  var rows = '';
+  for (var i = 0; i < N; i++) {
+    var active = activePerHour[i];
+    var capacity = canServe[i];
+    var served = Math.min(active, capacity);
+    var deadTime = Math.max(0, active - capacity);
+    var underCover = Math.max(0, capacity - active); // orders go unfulfilled
+
+    var statusClass, statusLabel;
+    if (active === 0) {
+      statusClass = ''; statusLabel = 'No users active';
+    } else if (deadTime > 0) {
+      statusClass = 'cov-bad'; statusLabel = deadTime + ' idle';
+    } else if (underCover > 0) {
+      statusClass = 'cov-warn'; statusLabel = underCover + ' unfilled slots';
+    } else {
+      statusClass = 'cov-ok'; statusLabel = '&#10003; Matched';
+    }
+
+    var deadLabel = deadTime > 0 ? (deadTime + ' users') : '&mdash;';
+    var deadClass = deadTime > 0 ? 'cov-bad' : '';
+
+    rows += '<div class="coverage-row">'
+      + '<div class="cov-cell">' + HOURS[i] + '</div>'
+      + '<div class="cov-cell">' + active + '</div>'
+      + '<div class="cov-cell">' + capacity + '</div>'
+      + '<div class="cov-cell ' + deadClass + '">' + deadLabel + '</div>'
+      + '<div class="cov-cell ' + statusClass + '">' + statusLabel + '</div>'
+      + '</div>';
+  }
+
+  document.getElementById('coverageTable').innerHTML =
+    '<div class="coverage-row" style="grid-template-columns: 44px 1fr 1fr 1fr 1fr;">'
+    + '<div class="cov-cell" style="color:var(--ink3);font-size:0.52rem;">Hour</div>'
+    + '<div class="cov-cell" style="color:var(--ink3);font-size:0.52rem;">Pool active</div>'
+    + '<div class="cov-cell" style="color:var(--ink3);font-size:0.52rem;">Supply serves</div>'
+    + '<div class="cov-cell" style="color:var(--ink3);font-size:0.52rem;">Dead time</div>'
+    + '<div class="cov-cell" style="color:var(--ink3);font-size:0.52rem;">Status</div>'
+    + '</div>'
+    + rows.replace(/class="coverage-row"/g, 'class="coverage-row" style="grid-template-columns: 44px 1fr 1fr 1fr 1fr;"');
+}
+
+function updateManualCoverage() {
+  var orders = getOrders();
+  var p = getParams();
+  var scenVal = document.querySelector('input[name="manualScen"]:checked').value;
+  var activeHrs = parseInt(document.getElementById('manualActiveHrs').value);
+  document.getElementById('manualActiveHrsVal').textContent = activeHrs + 'h';
+
+  var scenMap = {
+    hiSrSlow: { sr: p.srMax, st: p.stMax, ft: p.ftMax },
+    hiSrFast: { sr: p.srMax, st: p.stMin, ft: p.ftMin },
+    loSrSlow: { sr: p.srMin, st: p.stMax, ft: p.ftMax },
+    loSrFast: { sr: p.srMin, st: p.stMin, ft: p.ftMin }
+  };
+  var s = scenMap[scenVal];
+  var N = 6;
+  var joinIds = ['mj6','mj7','mj8','mj9','mj10','mj11'];
+
+  // New users joining each hour (user-specified)
+  var newJoining = joinIds.map(function(id) {
+    return Math.max(0, parseInt(document.getElementById(id).value) || 0);
+  });
+
+  // Total unique users = sum of all new joiners
+  var totalUnique = newJoining.reduce(function(a, b) { return a + b; }, 0);
+  document.getElementById('manualTotalUsers').textContent = totalUnique;
+
+  // Active users each hour: users who joined in this hour or up to (activeHrs-1) prior hours
+  var activePerHour = [];
+  for (var h = 0; h < N; h++) {
+    var active = 0;
+    for (var past = 0; past < activeHrs; past++) {
+      var srcHour = h - past;
+      if (srcHour >= 0) active += newJoining[srcHour];
+    }
+    activePerHour.push(active);
+  }
+
+  // Supply capacity each hour
+  var canServe = orders.map(function(o) {
+    return o === 0 ? 0 : usersNeeded(o, s.sr, s.st, s.ft);
+  });
+
+  var rows = '';
+  var gridStyle = 'style="grid-template-columns: 44px 1fr 1fr 1fr 1fr 1fr;"';
+  for (var i = 0; i < N; i++) {
+    var joining = newJoining[i];
+    var carryOver = activePerHour[i] - joining;
+    var active = activePerHour[i];
+    var capacity = canServe[i];
+    var deadTime = Math.max(0, active - capacity);
+    var underCover = Math.max(0, capacity - active);
+
+    var statusClass, statusLabel;
+    if (active === 0) {
+      statusClass = ''; statusLabel = 'No users';
+    } else if (deadTime > 0) {
+      statusClass = 'cov-bad'; statusLabel = deadTime + ' idle';
+    } else if (underCover > 0) {
+      statusClass = 'cov-warn'; statusLabel = underCover + ' unfilled';
+    } else {
+      statusClass = 'cov-ok'; statusLabel = '&#10003; Matched';
+    }
+
+    rows += '<div class="coverage-row" ' + gridStyle + '>'
+      + '<div class="cov-cell">' + HOURS[i] + '</div>'
+      + '<div class="cov-cell">' + joining + '</div>'
+      + '<div class="cov-cell">' + carryOver + '</div>'
+      + '<div class="cov-cell">' + active + '</div>'
+      + '<div class="cov-cell">' + capacity + '</div>'
+      + '<div class="cov-cell ' + statusClass + '">' + statusLabel + '</div>'
+      + '</div>';
+  }
+
+  document.getElementById('manualCoverageTable').innerHTML =
+    '<div class="coverage-row header" ' + gridStyle + '>'
+    + '<div class="cov-cell">Hour</div>'
+    + '<div class="cov-cell">New joining</div>'
+    + '<div class="cov-cell">Carry-over</div>'
+    + '<div class="cov-cell">Total active</div>'
+    + '<div class="cov-cell">Supply serves</div>'
+    + '<div class="cov-cell">Status</div>'
+    + '</div>' + rows;
+}
+
+
+function updateGantt() {
+  var orders = getOrders();
+  var p = getParams();
+  var scenVal = document.querySelector('input[name="ganttScen"]:checked').value;
+  var scenMap = {
+    hiSrSlow: { sr: p.srMax, st: p.stMax, ft: p.ftMax, color: 'rgba(34,139,87,0.8)' },
+    hiSrFast: { sr: p.srMax, st: p.stMin, ft: p.ftMin, color: 'rgba(34,139,87,0.55)' },
+    loSrSlow: { sr: p.srMin, st: p.stMax, ft: p.ftMax, color: 'rgba(200,80,40,0.55)' },
+    loSrFast: { sr: p.srMin, st: p.stMin, ft: p.ftMin, color: 'rgba(200,80,40,0.8)' }
+  };
+  var sc = scenMap[scenVal];
+  var usersPerHour = orders.map(function(o) { return usersNeeded(o, sc.sr, sc.st, sc.ft); });
+  var cohorts1 = getCohorts(usersPerHour, 1);
+  var cohorts2 = getCohorts(usersPerHour, 2);
+  var cohorts3 = getCohorts(usersPerHour, 3);
+  var total1 = cohorts1.reduce(function(a, b) { return a + b; }, 0);
+  var total2 = cohorts2.reduce(function(a, b) { return a + b; }, 0);
+  var total3 = cohorts3.reduce(function(a, b) { return a + b; }, 0);
+  var nonzero1 = cohorts1.filter(function(x) { return x > 0; }).length;
+  var nonzero2 = cohorts2.filter(function(x) { return x > 0; }).length;
+  var nonzero3 = cohorts3.filter(function(x) { return x > 0; }).length;
+  var headerCells = '';
+  var hourLabels = ['6 AM','7 AM','8 AM','9 AM','10 AM','11 AM'];
+  for (var i = 0; i < hourLabels.length; i++) {
+    headerCells += '<div class="gantt-header-cell">' + hourLabels[i] + '</div>';
+  }
+  document.getElementById('ganttChart').innerHTML =
+    '<div class="gantt-wrap">'
+    + '<div class="gantt-header"><div class="gantt-header-cell"></div>' + headerCells + '</div>'
+    + '<div class="gantt-row"><div class="gantt-group-label">1-hour buyers (' + nonzero1 + ' cohorts &middot; ' + total1 + ' users)</div></div>'
+    + buildRows(cohorts1, 1, sc.color)
+    + '<div class="gantt-row"><div class="gantt-group-label">2-hour buyers (' + nonzero2 + ' cohorts &middot; ' + total2 + ' users)</div></div>'
+    + buildRows(cohorts2, 2, sc.color)
+    + '<div class="gantt-row"><div class="gantt-group-label">3-hour buyers (' + nonzero3 + ' cohorts &middot; ' + total3 + ' users)</div></div>'
+    + buildRows(cohorts3, 3, sc.color)
+    + '</div>';
+  document.getElementById('ganttTotals').innerHTML =
+    '<div class="gantt-totals-row">1h buyers <span>' + total1 + ' users</span></div>'
+    + '<div class="gantt-totals-row">2h buyers <span>' + total2 + ' users</span></div>'
+    + '<div class="gantt-totals-row">3h buyers <span>' + total3 + ' users</span></div>';
+}
+
+function update() {
+  var orders = getOrders();
+  var p = getParams();
+  var hiSrSlowTxn = orders.map(function(o) { return usersNeeded(o, p.srMax, p.stMax, p.ftMax); });
+  var hiSrFastTxn = orders.map(function(o) { return usersNeeded(o, p.srMax, p.stMin, p.ftMin); });
+  var loSrSlowTxn = orders.map(function(o) { return usersNeeded(o, p.srMin, p.stMax, p.ftMax); });
+  var loSrFastTxn = orders.map(function(o) { return usersNeeded(o, p.srMin, p.stMin, p.ftMin); });
+  mainChart.data.datasets[0].data = orders;
+  mainChart.data.datasets[1].data = hiSrSlowTxn;
+  mainChart.data.datasets[2].data = hiSrFastTxn;
+  mainChart.data.datasets[3].data = loSrSlowTxn;
+  mainChart.data.datasets[4].data = loSrFastTxn;
+  mainChart.update();
+  // Peak demand hour
+  var maxUsers = orders.map(function(o, i) { return Math.max(hiSrSlowTxn[i], hiSrFastTxn[i], loSrSlowTxn[i], loSrFastTxn[i]); });
+  var peakVal = Math.max.apply(null, maxUsers);
+  var peakIdx = maxUsers.indexOf(peakVal);
+  document.getElementById('bottleneckHour').textContent = HOURS[peakIdx];
+  document.getElementById('bottleneckSub').textContent = Math.max.apply(null, loSrFastTxn) + ' users needed (Lo SR · Fast Txn)';
+  // Summary table
+  var sr = document.getElementById('summaryRow');
+  sr.innerHTML = '';
+  for (var i = 0; i < orders.length; i++) {
+    var cell = document.createElement('div');
+    cell.className = 'summary-cell';
+    cell.innerHTML = '<div class="sc-hour">' + HOURS[i] + '</div>'
+      + '<div class="sc-orders">' + orders[i] + ' orders</div>'
+      + '<div class="sc-range sc-best">Hi SR · Slow: ' + hiSrSlowTxn[i] + '</div>'
+      + '<div class="sc-range sc-best" style="opacity:0.65">Hi SR · Fast: ' + hiSrFastTxn[i] + '</div>'
+      + '<div class="sc-range sc-worst" style="opacity:0.65">Lo SR · Slow: ' + loSrSlowTxn[i] + '</div>'
+      + '<div class="sc-range sc-worst">Lo SR · Fast: ' + loSrFastTxn[i] + '</div>';
+    sr.appendChild(cell);
+  }
+  // Daily unique users
+  var daily1hHi = dailyUniqueUsersRandom(hiSrSlowTxn, 1);
+  var daily1hLo = dailyUniqueUsersRandom(loSrFastTxn, 1);
+  var daily2hHi = dailyUniqueUsersRandom(hiSrSlowTxn, 2);
+  var daily2hLo = dailyUniqueUsersRandom(loSrFastTxn, 2);
+  var daily3hHi = dailyUniqueUsersRandom(hiSrSlowTxn, 3);
+  var daily3hLo = dailyUniqueUsersRandom(loSrFastTxn, 3);
+  var totalHiSrSlow = hiSrSlowTxn.reduce(function(a, b) { return a + b; }, 0);
+  var totalLoSrFast = loSrFastTxn.reduce(function(a, b) { return a + b; }, 0);
+  document.getElementById('dailyUserHours').textContent = totalHiSrSlow + '–' + totalLoSrFast;
+  document.getElementById('dailyUserHoursSub').textContent = 'Hi SR/Slow: ' + totalHiSrSlow + ' user-hrs  ·  Lo SR/Fast: ' + totalLoSrFast + ' user-hrs';
+  document.getElementById('dailyUnique1h').textContent = daily1hHi + '–' + daily1hLo;
+  document.getElementById('dailyUnique2h').textContent = daily2hHi + '–' + daily2hLo;
+  document.getElementById('dailyUnique3h').textContent = daily3hHi + '–' + daily3hLo;
+  // Formula footnote
+  var wtHiSlow = weightedTime(p.srMax, p.stMax, p.ftMax).toFixed(1);
+  var wtHiFast = weightedTime(p.srMax, p.stMin, p.ftMin).toFixed(1);
+  var wtLoSlow = weightedTime(p.srMin, p.stMax, p.ftMax).toFixed(1);
+  var wtLoFast = weightedTime(p.srMin, p.stMin, p.ftMin).toFixed(1);
+  document.getElementById('noteText').textContent =
+    'Formula: Users Needed/hr = (Orders / SR) x (Weighted Txn Time / 60)  |  Daily unique users = min pool for random-start coverage'
+    + '  |  Weighted times: Hi SR/Slow=' + wtHiSlow + 'm  Hi SR/Fast=' + wtHiFast + 'm  Lo SR/Slow=' + wtLoSlow + 'm  Lo SR/Fast=' + wtLoFast + 'm';
+  updateScenLabels();
+  updateCoverage();
+  updateGantt();
+  updateManualCoverage();
+}
+
+// Wire inputs
+HOUR_IDS.forEach(function(id) { document.getElementById(id).addEventListener('input', update); });
+['srMin','srMax','stMin','stMax','ftMin','ftMax'].forEach(function(id) {
+  document.getElementById(id).addEventListener('input', function() {
+    document.getElementById('srMinVal').textContent = document.getElementById('srMin').value + '%';
+    document.getElementById('srMaxVal').textContent = document.getElementById('srMax').value + '%';
+    document.getElementById('stMinVal').textContent = document.getElementById('stMin').value + 'm';
+    document.getElementById('stMaxVal').textContent = document.getElementById('stMax').value + 'm';
+    document.getElementById('ftMinVal').textContent = document.getElementById('ftMin').value + 'm';
+    document.getElementById('ftMaxVal').textContent = document.getElementById('ftMax').value + 'm';
+    update();
+  });
+});
+document.querySelectorAll('input[name="coverageScen"]').forEach(function(r) { r.addEventListener('change', updateCoverage); });
+document.getElementById('covActiveHrs').addEventListener('input', updateCoverage);
+document.getElementById('poolSize').addEventListener('input', updateCoverage);
+document.querySelectorAll('input[name="manualScen"]').forEach(function(r) { r.addEventListener('change', updateManualCoverage); });
+document.getElementById('manualActiveHrs').addEventListener('input', updateManualCoverage);
+['mj6','mj7','mj8','mj9','mj10','mj11'].forEach(function(id) {
+  document.getElementById(id).addEventListener('input', updateManualCoverage);
+});
+document.querySelectorAll('input[name="ganttScen"]').forEach(function(r) { r.addEventListener('change', updateGantt); });
+
+update();
+</script>
+</body>
+</html>
