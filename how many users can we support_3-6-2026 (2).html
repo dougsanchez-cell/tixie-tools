@@ -108,7 +108,7 @@
 
   .hour-inputs {
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(9, 1fr);
     gap: 10px;
   }
 
@@ -409,7 +409,7 @@
   /* BOTTOM SUMMARY */
   .summary-row {
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(9, 1fr);
     gap: 1px;
     background: var(--rule);
     border: 1px solid var(--rule);
@@ -455,7 +455,7 @@
 
   .gantt-header {
     display: grid;
-    grid-template-columns: 80px repeat(6, 1fr);
+    grid-template-columns: 80px repeat(9, 1fr);
     gap: 0;
     margin-bottom: 6px;
   }
@@ -483,7 +483,7 @@
 
   .gantt-row {
     display: grid;
-    grid-template-columns: 80px repeat(6, 1fr);
+    grid-template-columns: 80px repeat(9, 1fr);
     gap: 2px;
     margin-bottom: 3px;
     align-items: center;
@@ -593,7 +593,7 @@
 <div class="top">
   <div class="title-block">
     <h1>Sustainable User Capacity</h1>
-    <p>INITIAL PLATFORM VIABILITY · SUPPLY MODEL · 06:00–12:00 PT</p>
+    <p>LIVE EVENT PURCHASING TOOL · SUPPLY MODEL · 06:00–15:00 PT</p>
   </div>
   <div class="reading-block">
     <div class="read-label">Peak Demand Hour</div>
@@ -612,6 +612,9 @@
     <div class="hour-cell"><label>9 AM</label><input type="number" id="h9" value="240" min="0"></div>
     <div class="hour-cell"><label>10 AM</label><input type="number" id="h10" value="180" min="0"></div>
     <div class="hour-cell"><label>11 AM</label><input type="number" id="h11" value="130" min="0"></div>
+    <div class="hour-cell"><label>12 PM</label><input type="number" id="h12" value="100" min="0"></div>
+    <div class="hour-cell"><label>1 PM</label><input type="number" id="h13" value="100" min="0"></div>
+    <div class="hour-cell"><label>2 PM</label><input type="number" id="h14" value="80" min="0"></div>
   </div>
 </div>
 
@@ -843,7 +846,7 @@
 
     <div style="margin-top:16px;">
       <div class="daily-panel-label">New Users Joining Each Hour</div>
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin-top:6px;">
+      <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:6px; margin-top:6px;">
         <div>
           <div style="font-family:var(--font); font-size:0.55rem; color:var(--ink3); margin-bottom:2px;">6 AM</div>
           <input type="number" id="mj6" value="10" min="0" class="manual-join-input">
@@ -867,6 +870,18 @@
         <div>
           <div style="font-family:var(--font); font-size:0.55rem; color:var(--ink3); margin-bottom:2px;">11 AM</div>
           <input type="number" id="mj11" value="10" min="0" class="manual-join-input">
+        </div>
+        <div>
+          <div style="font-family:var(--font); font-size:0.55rem; color:var(--ink3); margin-bottom:2px;">12 PM</div>
+          <input type="number" id="mj12" value="10" min="0" class="manual-join-input">
+        </div>
+        <div>
+          <div style="font-family:var(--font); font-size:0.55rem; color:var(--ink3); margin-bottom:2px;">1 PM</div>
+          <input type="number" id="mj13" value="10" min="0" class="manual-join-input">
+        </div>
+        <div>
+          <div style="font-family:var(--font); font-size:0.55rem; color:var(--ink3); margin-bottom:2px;">2 PM</div>
+          <input type="number" id="mj14" value="10" min="0" class="manual-join-input">
         </div>
       </div>
       <div class="daily-panel-sub" style="margin-top:6px;">Total unique users: <strong id="manualTotalUsers">—</strong></div>
@@ -893,8 +908,8 @@
 <div class="note" id="noteText">—</div>
 
 <script>
-const HOURS = ['6 AM','7 AM','8 AM','9 AM','10 AM','11 AM'];
-const HOUR_IDS = ['h6','h7','h8','h9','h10','h11'];
+const HOURS = ['6 AM','7 AM','8 AM','9 AM','10 AM','11 AM','12 PM','1 PM','2 PM'];
+const HOUR_IDS = ['h6','h7','h8','h9','h10','h11','h12','h13','h14'];
 
 function getOrders() {
   return HOUR_IDS.map(function(id) {
@@ -968,7 +983,7 @@ function coverageByHour(usersPerHour, activeHours) {
 }
 
 function buildRows(cohorts, activeHours, color) {
-  var hourLabels = ['6 AM','7 AM','8 AM','9 AM','10 AM','11 AM'];
+  var hourLabels = ['6 AM','7 AM','8 AM','9 AM','10 AM','11 AM','12 PM','1 PM','2 PM'];
   var html = '';
   for (var s = 0; s < cohorts.length; s++) {
     var count = cohorts[s];
@@ -1095,7 +1110,7 @@ function updateCoverage() {
     loSrFast: { sr: p.srMin, st: p.stMin, ft: p.ftMin }
   };
   var s = scenMap[scenVal];
-  var N = 6;
+  var N = 9;
   var validStarts = N - activeHrs + 1;
 
   // How many of the pool are active each hour, given random uniform start times.
@@ -1177,8 +1192,8 @@ function updateManualCoverage() {
     loSrFast: { sr: p.srMin, st: p.stMin, ft: p.ftMin }
   };
   var s = scenMap[scenVal];
-  var N = 6;
-  var joinIds = ['mj6','mj7','mj8','mj9','mj10','mj11'];
+  var N = 9;
+  var joinIds = ['mj6','mj7','mj8','mj9','mj10','mj11','mj12','mj13','mj14'];
 
   // New users joining each hour (user-specified)
   var newJoining = joinIds.map(function(id) {
@@ -1270,7 +1285,7 @@ function updateGantt() {
   var nonzero2 = cohorts2.filter(function(x) { return x > 0; }).length;
   var nonzero3 = cohorts3.filter(function(x) { return x > 0; }).length;
   var headerCells = '';
-  var hourLabels = ['6 AM','7 AM','8 AM','9 AM','10 AM','11 AM'];
+  var hourLabels = ['6 AM','7 AM','8 AM','9 AM','10 AM','11 AM','12 PM','1 PM','2 PM'];
   for (var i = 0; i < hourLabels.length; i++) {
     headerCells += '<div class="gantt-header-cell">' + hourLabels[i] + '</div>';
   }
@@ -1369,13 +1384,13 @@ document.getElementById('covActiveHrs').addEventListener('input', updateCoverage
 document.getElementById('poolSize').addEventListener('input', updateCoverage);
 document.querySelectorAll('input[name="manualScen"]').forEach(function(r) { r.addEventListener('change', updateManualCoverage); });
 document.getElementById('manualActiveHrs').addEventListener('input', updateManualCoverage);
-['mj6','mj7','mj8','mj9','mj10','mj11'].forEach(function(id) {
+['mj6','mj7','mj8','mj9','mj10','mj11','mj12','mj13','mj14'].forEach(function(id) {
   document.getElementById(id).addEventListener('input', updateManualCoverage);
 });
 document.querySelectorAll('input[name="ganttScen"]').forEach(function(r) { r.addEventListener('change', updateGantt); });
 
 // ── Auto-populate from URL query params (Hex integration) ──
-// Usage: ...capacity_tool.html?h6=77&h7=101&h8=430&h9=388&h10=103&h11=489
+// Usage: ...capacity_tool.html?h6=77&h7=101&h8=430&h9=388&h10=103&h11=489&h12=151&h13=628&h14=480
 // Optional: &src=Hex&dt=2026-03-19 (shown in header as data source label)
 (function() {
   var params = new URLSearchParams(window.location.search);
@@ -1392,10 +1407,12 @@ document.querySelectorAll('input[name="ganttScen"]').forEach(function(r) { r.add
     if (sub) {
       var src = params.get('src') || 'Hex';
       var dt = params.get('dt') || '';
-      sub.textContent += '  · ' + populated.length + ' hours loaded from ' + src + (dt ? ' (' + dt + ')' : '');
+      sub.textContent += '  \u00B7  ' + populated.length + ' hours loaded from ' + src + (dt ? ' (' + dt + ')' : '');
     }
   }
 })();
 
 update();
 </script>
+</body>
+</html>
