@@ -1374,7 +1374,28 @@ document.getElementById('manualActiveHrs').addEventListener('input', updateManua
 });
 document.querySelectorAll('input[name="ganttScen"]').forEach(function(r) { r.addEventListener('change', updateGantt); });
 
+// ── Auto-populate from URL query params (Hex integration) ──
+// Usage: ...capacity_tool.html?h6=77&h7=101&h8=430&h9=388&h10=103&h11=489
+// Optional: &src=Hex&dt=2026-03-19 (shown in header as data source label)
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  var populated = [];
+  HOUR_IDS.forEach(function(id) {
+    var val = params.get(id);
+    if (val !== null && !isNaN(parseInt(val))) {
+      document.getElementById(id).value = parseInt(val);
+      populated.push(id);
+    }
+  });
+  if (populated.length > 0) {
+    var sub = document.querySelector('.title-block p');
+    if (sub) {
+      var src = params.get('src') || 'Hex';
+      var dt = params.get('dt') || '';
+      sub.textContent += '  · ' + populated.length + ' hours loaded from ' + src + (dt ? ' (' + dt + ')' : '');
+    }
+  }
+})();
+
 update();
 </script>
-</body>
-</html>
